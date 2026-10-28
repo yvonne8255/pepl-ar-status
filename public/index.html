@@ -1,0 +1,749 @@
+<title>PEPL AR Status</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap">
+<style>
+/* Layout: one header, a sticky "selected customer" bar, a totals strip, then four linked tables stacked (Aging, Follow Up, Action, Bank Incoming monthly). Every table has full grid outlines. */
+:root{
+  --bg:#edf0f4; --surface:#ffffff; --ink:#14202e; --muted:#586577; --line:#d8dee6; --grid:#b9c3d0;
+  --head:#eaeff5; --accent:#0e5a8a; --accent-ink:#ffffff; --sel:#cfe6f7; --sel-ink:#0b2f49;
+  --s1:#a66a00; --s2:#d03a12; --s3:#7c3aed; --s4:#0f766e;
+  --cream:#fff0a8; --neg:#b3261e; --warn:#8a5a00; --row-hover:#f1f6fb;
+  --font-display:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
+  --font-body:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
+  --font-mono:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#93a0b1; --line:#253142; --grid:#3a4a60;
+    --head:#1b2633; --accent:#62b1e8; --accent-ink:#06121c; --sel:#1e3d57; --sel-ink:#d9eeff;
+    --s1:#f0b84a; --s2:#ff8a65; --s3:#b794f6; --s4:#4fd1c5;
+    --cream:#6a5a18; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#93a0b1; --line:#253142; --grid:#3a4a60;
+  --head:#1b2633; --accent:#62b1e8; --accent-ink:#06121c; --sel:#1e3d57; --sel-ink:#d9eeff;
+  --s1:#f0b84a; --s2:#ff8a65; --s3:#b794f6; --s4:#4fd1c5;
+  --cream:#6a5a18; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(26px,4vw,36px);letter-spacing:.01em;line-height:1.05;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin-top:4px;font-size:13px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=search]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--grid);border-radius:6px;padding:8px 10px;width:min(280px,100%)}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--surface);color:var(--ink);border:1px solid var(--grid);border-radius:6px;padding:8px 12px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.updated{color:var(--muted);font-size:12px;font-family:var(--font-mono)}
+
+/* Top summary (stage buttons, totals, selected customer) stays pinned while the tables scroll */
+.pin{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:flex;flex-direction:column;gap:6px;background:var(--bg);padding:6px 0 8px;border-bottom:1px solid var(--grid)}
+.pin .kpis{gap:8px}
+.pin .kpirow{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.pin .kpi{padding:5px 10px}
+.pin .kpi .k{font-size:10px;letter-spacing:.04em}
+.pin .kpi .v{font-size:15px;margin-top:0}
+.pin .selbar{padding:6px 12px}
+.selbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;
+  background:var(--sel);color:var(--sel-ink);border:1px solid var(--grid);border-radius:8px;padding:10px 14px}
+.selbar[hidden]{display:none!important}
+.selbar b{font-weight:600;overflow-wrap:anywhere}
+.selbar .counts{font-family:var(--font-mono);font-size:12px}
+.selbar .btn{margin-left:auto;padding:5px 10px;background:transparent;color:inherit;border-color:currentColor}
+
+.kpis{display:flex;flex-direction:column;gap:10px}
+.kpis[hidden]{display:none!important}
+.kpirow{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:10px 14px;min-width:0}
+.kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:var(--font-mono);font-size:18px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi.main .v{color:var(--accent)}
+.kpi .v.neg{color:var(--neg)}
+
+section.tbl{background:var(--surface);border:1px solid var(--grid);border-radius:8px;min-width:0;overflow:hidden}
+.th{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px;padding:12px 14px;border-bottom:1px solid var(--grid)}
+.th h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:.01em}
+.th .meta{color:var(--muted);font-size:12px;font-family:var(--font-mono)}
+.legend{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--grid);font-size:12px;color:var(--muted)}
+.sw{display:inline-block;width:18px;height:12px;background:var(--cream);border:1px solid var(--grid)}
+.scroll{overflow:auto;max-height:460px;margin:12px;border:1px solid var(--grid)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid)}
+th:last-child,td:last-child{border-right:0}
+tbody tr:last-child td,tfoot tr:last-child td{border-bottom:0}
+th{position:sticky;top:0;z-index:2;background:var(--head);text-align:left;font-weight:600;font-size:12px;color:var(--muted);padding:0;white-space:nowrap;vertical-align:top}
+th .sortbtn{display:flex;width:100%;align-items:center;gap:6px;justify-content:flex-start;background:none;border:0;color:inherit;font:inherit;font-weight:700;text-align:left;padding:6px 10px}
+th .sortbtn:hover{color:var(--ink)}
+th .ind{font-size:10px;opacity:.35}
+th[aria-sort="ascending"] .ind,th[aria-sort="descending"] .ind{opacity:1;color:var(--accent)}
+td{padding:7px 12px;vertical-align:top;white-space:nowrap;background:var(--surface)}
+tbody tr:hover td{background:var(--row-hover)}
+td.num,th.num{text-align:left;font-variant-numeric:tabular-nums}
+td.neg{color:var(--neg)}
+td.gap,tbody tr:hover td.gap{background:var(--cream)}
+td.wide{white-space:normal;min-width:16rem;max-width:30rem}
+td.cname{white-space:normal;min-width:14rem;max-width:22rem}
+th.first,td.cname{position:sticky;left:0}
+th.first{z-index:4}
+td.cname{z-index:1}
+tfoot td{position:sticky;bottom:0;background:var(--head);font-weight:600;border-top:1px solid var(--grid);z-index:2}
+.cust{background:none;border:0;padding:0;color:var(--accent);text-align:left;font-weight:500;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.cust:hover{text-decoration-color:currentColor}
+tr.isel td{background:var(--sel);color:var(--sel-ink)}
+tr.isel td.gap{background:var(--cream);color:inherit}
+tr.isel .cust{color:inherit;text-decoration-color:currentColor}
+.cust.s1,.chip.s1{color:var(--s1)} .cust.s2,.chip.s2{color:var(--s2)} .cust.s3,.chip.s3{color:var(--s3)} .cust.s4,.chip.s4{color:var(--s4)}
+tr.isel .cust.s1{color:var(--s1)} tr.isel .cust.s2{color:var(--s2)} tr.isel .cust.s3{color:var(--s3)} tr.isel .cust.s4{color:var(--s4)}
+.cust.s1,.cust.s2,.cust.s3,.cust.s4{font-weight:700}
+.stagebar{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:12px;color:var(--muted);align-items:center}
+.stagebar[hidden]{display:none!important}
+button.chip{font:inherit;font-weight:700;background:none;border:1px solid transparent;border-radius:999px;padding:2px 10px;cursor:pointer}
+button.chip:hover{border-color:currentColor}
+button.chip.on{background:var(--sel);border-color:currentColor}
+.state{padding:22px 14px;color:var(--muted)}
+.state.err{color:var(--warn)}
+.state .btn{margin-top:8px}
+.more{padding:10px 14px;border-top:1px solid var(--grid);display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
+@media (prefers-reduced-motion:no-preference){.btn{transition:border-color .15s}}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--grid);border-radius:6px;padding:3px 8px}
+.filters{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.salesbox{display:flex;gap:6px;align-items:center;font-weight:700}
+.kpi .v{font-weight:700}
+/* Calibri 10 pt everywhere (title slightly larger) */
+body,table,th,td,button,input,select,.sub,.updated,.legend,.th h2,.th .meta,.kpi .k,.kpi .v,.pin .kpi .k,.pin .kpi .v,.stagebar,.selbar .counts,.more,.state,.cust,.chip{font-size:10pt}
+h1{font-size:14pt}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>PEPL AR Status</h1>
+      <div class="sub">Aging · AR Follow Up · Weekly Expected Receipts · Bank Incoming Monthly Receipts · Action, linked by Customer Name. Click a customer name to show only that customer in every table. Click a column title to sort.</div>
+    </div>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search Customer Name" aria-label="Search Customer Name">
+      <button class="btn primary" id="refresh">Refresh data</button>
+    </div>
+  </header>
+  <div class="updated" id="updated" aria-live="polite">Loading…</div>
+  <div class="pin" id="pin">
+    <div class="filters"><label class="salesbox" for="sales">Sales <select id="sales"><option value="">All</option></select></label><label class="salesbox" for="handle">Handle By <select id="handle"><option value="">All</option></select></label><div class="stagebar" id="stagebar" hidden></div></div>
+    <div class="kpis" id="kpis" hidden></div>
+    <div class="selbar" id="selbar" hidden>
+      <span>Selected customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
+      <button class="btn" id="clear">Clear</button>
+    </div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+(function(){
+  var SERVER = "Google Sheets";
+  var SHEETS = [
+    {key:"aging",  title:"Aging",        id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"Aging!A:Z"},
+    {key:"follow", title:"AR Follow Up", id:"1benIfpQNEmBE_TRhneGUmyUkHfjEs_DS8afpVSbEG0w", range:"'Form Responses 1'!A:O"},
+    {key:"week",   title:"Weekly Expected Receipts",  derived:true},
+    {key:"bank",   title:"Bank Incoming · Monthly Receipts", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'Bank Incoming'!A:G", pivot:true},
+    {key:"action", title:"Action",       id:"1qKdjS2GGt54lg6eM1A2VHtfVj6NgWLBG6Y_ZR6KocsY", range:"'Form responses 1'!A:O"},
+    {key:"sales",  title:"Sales Analysis", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'Sales Analysis Report by Custom'!A:Z", hidden:true},
+    {key:"handle", title:"CC Handle By", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'CC Handle By'!A:B", hidden:true}
+  ];
+  var MONTHIDX = {january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+  var STAGES = [
+    {re:/final\s*reminder/i, label:"Final Reminder"}, {re:/^lod$/i, label:"LOD"},
+    {re:/^sccb$/i, label:"SCCB"}, {re:/final\s*action\s*remark/i, label:"Final Action Remark"}
+  ];
+  var owed = {}, stageOf = {}, stageFilter = 0, salesOf = {}, salesFilter = "", handleOf = {}, handleFilter = "";
+  var PAGE = 100;
+  var MONEY = /\b(balance|amount|overdue|paid|january|february|march|april|may|june|july|august|september|october|november|december|before july)\b/i;
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var state = {}; var selected = null; var query = "";
+  // Standalone mode: read through the authenticated server endpoint instead of claude.ai.
+  var mcp = null; var stamp = null;
+  var serverApi = {callTool: async function(_srv, _tool, input){
+    var r = await fetch("/api/values?id="+encodeURIComponent(input.spreadsheetId)+"&range="+encodeURIComponent(input.range), {credentials:"same-origin"});
+    if(r.status===401){ location.href = "/api/login"; return new Promise(function(){}); }
+    if(!r.ok){ var e = new Error("http_"+r.status); e.code = "http_"+r.status; e.retryable = r.status>=500; throw e; }
+    var j = await r.json();
+    return {payload:{range:j.range, values:j.values}, cache:{storedAt:j.storedAt}};
+  }};
+
+  SHEETS.forEach(function(s){ state[s.key] = {status:"loading", shown:PAGE, cols:[], rows:[], cust:-1, sort:null}; });
+
+  function num(v){
+    if(v==null) return null;
+    var t = String(v).replace(/[\s,$]/g,"");
+    if(/^\(.*\)$/.test(t)) t = "-" + t.slice(1,-1);
+    if(!/^-?\d+(\.\d+)?$/.test(t)) return null;
+    return parseFloat(t);
+  }
+  function fmt(n){ return n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function esc(s){ return String(s==null?"":s); }
+  var DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
+  function parseDate(s){
+    var m = DATE_RE.exec(s); if(!m) return null;
+    var y = +m[3]; if(y<100) y += 2000;
+    return new Date(y, +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0)).getTime();
+  }
+
+  function valuesOf(res){
+    var p = res && res.payload;
+    if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){} }
+    if(p && Array.isArray(p.values)) return p.values;
+    var t = res && res.content && res.content[0] && res.content[0].text;
+    try{ var j = JSON.parse(t); if(j && Array.isArray(j.values)) return j.values; }catch(e){}
+    return [];
+  }
+
+  function colType(c, rows, k){
+    if(c.money || c.pivot) return "num";
+    var vals = []; for(var i=0;i<rows.length;i++){ if(rows[i][k]!=="") vals.push(rows[i][k]); }
+    if(!vals.length) return "text";
+    if(vals.every(function(v){ return parseDate(v)!==null; })) return "date";
+    if(vals.every(function(v){ return num(v)!==null; })) return "num";
+    return "text";
+  }
+
+  function build(values){
+    var head = values[0] || [], body = values.slice(1), width = head.length;
+    body.forEach(function(r){ if(r.length>width) width = r.length; });
+    var cols = [];
+    for(var i=0;i<width;i++){
+      var h = esc(head[i]).trim();
+      if(/^sort\s*by$/i.test(h)) continue;
+      var has = h !== "";
+      if(!has){ for(var j=0;j<body.length;j++){ if(esc(body[j][i]).trim()!==""){ has = true; break; } } }
+      if(has) cols.push({i:i, label: h || ("Column " + (i+1)), money: MONEY.test(h), wide: /remark/i.test(h)});
+    }
+    var cust = -1;
+    cols.forEach(function(c,k){ if(cust<0 && /customer\s*name/i.test(c.label)) cust = k; });
+    var rows = [];
+    body.forEach(function(r){
+      var cells = cols.map(function(c){ return esc(r[c.i]).trim(); });
+      if(cells.every(function(x){ return x===""; })) return;
+      if(cust>=0 && cells[cust]==="") return;
+      rows.push(cells);
+    });
+    cols.forEach(function(c,k){ c.type = colType(c, rows, k); });
+    return {cols:cols, rows:rows, cust:cust};
+  }
+
+  // Bank Incoming -> one row per customer, one column per month (Document Total summed)
+  function buildBank(values){
+    var head = (values[0]||[]).map(function(h){ return esc(h).trim().toLowerCase(); });
+    var ci = head.indexOf("customer"), di = head.indexOf("date"), ai = head.indexOf("document total");
+    if(ci<0||di<0||ai<0) return {cols:[], rows:[], cust:-1, bad:true};
+    var per = {}, minM = null, maxM = null;
+    values.slice(1).forEach(function(r){
+      var name = esc(r[ci]).trim(); var t = parseDate(esc(r[di]).trim()); var a = num(r[ai]);
+      if(!name || t===null || a===null) return;
+      var d = new Date(t); var mk = d.getFullYear()*12 + d.getMonth();
+      if(minM===null||mk<minM) minM = mk; if(maxM===null||mk>maxM) maxM = mk;
+      var o = per[name] || (per[name] = {});
+      var c = o[mk] || (o[mk] = {s:0,n:0}); c.s += a; c.n++;
+    });
+    if(minM===null) return {cols:[], rows:[], cust:-1};
+    var cols = [{i:0,label:"Customer Name",money:false,type:"text"}], mks = [];
+    for(var m=maxM; m>=minM; m--){
+      mks.push(m);
+      cols.push({i:0,label:MON[m%12]+" "+Math.floor(m/12),money:true,pivot:true,type:"num",mk:m});
+    }
+    cols.push({i:0,label:"Total",money:true,pivot:true,total:true,type:"num"});
+    var rows = Object.keys(per).sort(function(a,b){ return a.localeCompare(b); }).map(function(name){
+      var tot = 0;
+      var cells = mks.map(function(mk){ var c = per[name][mk]; if(!c) return ""; tot += c.s; return String(c.s); });
+      return [name].concat(cells, [String(tot)]);
+    });
+    return {cols:cols, rows:rows, cust:0};
+  }
+
+  function delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  async function fetchSheet(s, refresh){
+    var input = {spreadsheetId:s.id, range:s.range};
+    var opts = refresh ? {cache:{refresh:true}} : undefined;
+    try{
+      return await mcp.callTool(SERVER, "get_values", input, opts);
+    }catch(e){
+      if(e && e.retryable){
+        await delay((e.retryAfterMs||1200) + Math.random()*600);
+        return await mcp.callTool(SERVER, "get_values", input, refresh ? {cache:{refresh:true}} : undefined);
+      }
+      throw e;
+    }
+  }
+
+  async function loadAll(refresh){
+    if(!mcp){ return; }
+    SHEETS.forEach(function(s){ if(state[s.key].status!=="ok") state[s.key].status="loading"; });
+    render();
+    var fetched = SHEETS.filter(function(s){ return !s.derived; });
+    var results = await Promise.allSettled(fetched.map(function(s){ return fetchSheet(s, refresh); }));
+    var times = [];
+    results.forEach(function(r,k){
+      var s = fetched[k], st = state[s.key];
+      if(r.status==="fulfilled"){
+        var m = s.pivot ? buildBank(valuesOf(r.value)) : build(valuesOf(r.value));
+        if(s.key==="follow") m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; });
+        if(s.key==="action"){ m = filterAction(m); m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; }); }
+        st.cols=m.cols; st.rows=m.rows; st.cust=m.cust; st.status="ok"; st.err=null; st.shown=PAGE;
+        if(st.sort && !st.cols[st.sort.k]) st.sort = null;
+        times.push(r.value.cache ? r.value.cache.storedAt : Date.now());
+      }else{
+        st.err = r.reason || {}; if(st.status!=="ok") st.status="error";
+      }
+    });
+    if(times.length) stamp = Math.min.apply(null, times);
+    applyDSO();
+    applyHandle();
+    render();
+  }
+
+  function visible(key){
+    var st = state[key];
+    if(st.cust<0) return st.rows;
+    var q = query.trim().toLowerCase();
+    return st.rows.filter(function(r){
+      var n = r[st.cust];
+      if(stageFilter && stageOf[n]!==stageFilter) return false;
+      if(salesFilter && salesOf[n]!==salesFilter) return false;
+      if(handleFilter && handleOf[n]!==handleFilter) return false;
+      if(selected!==null) return n===selected;
+      return q==="" || n.toLowerCase().indexOf(q)>=0;
+    });
+  }
+
+  // Weekly expected receipts: Follow Up rows with Estimated Balance > 0, grouped by Mon-Sun week of Estimated Receive Payment Date
+  function p2(n){ return (n<10?"0":"") + n; }
+  function dstr(d){ return p2(d.getDate()) + "/" + p2(d.getMonth()+1) + "/" + d.getFullYear(); }
+  var weekIgnored = 0, weekTot = [], actionHidden = 0;
+  // Action: keep only this year and last year (by Timestamp; rows without one use the latest date found in the row)
+  function filterAction(m){
+    var yr = new Date().getFullYear(), tsi = -1;
+    m.cols.forEach(function(c,k){ if(tsi<0 && /timestamp/i.test(c.label)) tsi = k; });
+    var kept = m.rows.filter(function(r){
+      var t = tsi>=0 ? parseDate(r[tsi]) : null;
+      if(t===null){ r.forEach(function(v){ var x = parseDate(v); if(x!==null && (t===null || x>t)) t = x; }); }
+      if(t===null) return true;
+      var y = new Date(t).getFullYear(); return y>=yr-1 && y<=yr;
+    });
+    actionHidden = m.rows.length - kept.length;
+    return {cols:m.cols, rows:kept, cust:m.cust};
+  }
+  // DSO (days) = Aging Balance Due / sum of all Sales Amount columns in "Sales Analysis Report by Custom" x number of Sales Amount columns x 30
+  var dsoN = 0;
+  function applyDSO(){
+    var a = state.aging, s = state.sales;
+    if(a.status!=="ok" || s.status!=="ok" || a.cust<0 || s.cust<0) return;
+    if(a.cols.some(function(c){ return c.dso; })) return;
+    var bi = -1; a.cols.forEach(function(c,k){ if(bi<0 && /balance/i.test(c.label)) bi = k; });
+    var sc = []; s.cols.forEach(function(c,k){ if(/sales\s*amount/i.test(c.label)) sc.push(k); });
+    if(bi<0 || !sc.length) return;
+    var sum = {};
+    s.rows.forEach(function(r){
+      var t = 0; sc.forEach(function(k){ var n = num(r[k]); if(n!==null) t += n; });
+      sum[r[s.cust]] = (sum[r[s.cust]]||0) + t;
+    });
+    dsoN = sc.length;
+    a.rows.forEach(function(r){
+      var b = num(r[bi]), t = sum[r[a.cust]];
+      r.splice(1, 0, (b!==null && t>0) ? String(Math.round(b / t * dsoN * 30)) : "");
+    });
+    a.cols.splice(1, 0, {label:"DSO", type:"num", dso:true, money:false});
+    a.sort = null;
+  }
+  // "Handle By" per customer (sheet "CC Handle By") - shown next to DSO in Aging and used by the Handle By drop-down
+  function handleIdx(h){ var k = -1; h.cols.forEach(function(c,i){ if(k<0 && /hand+le\s*by/i.test(c.label)) k = i; }); return k; }
+  function computeHandle(){
+    handleOf = {}; var h = state.handle; if(h.status!=="ok" || h.cust<0) return;
+    var hi = handleIdx(h); if(hi<0) return;
+    h.rows.forEach(function(r){ if(r[hi]!=="") handleOf[r[h.cust]] = r[hi]; });
+  }
+  function applyHandle(){
+    var a = state.aging; if(a.status!=="ok" || a.cust<0) return;
+    if(a.cols.some(function(c){ return c.handle; })) return;
+    computeHandle(); if(!Object.keys(handleOf).length) return;
+    var di = -1; a.cols.forEach(function(c,k){ if(di<0 && c.dso) di = k; });
+    var pos = di>=0 ? di+1 : 1;
+    a.rows.forEach(function(r){ r.splice(pos, 0, handleOf[r[a.cust]] || ""); });
+    a.cols.splice(pos, 0, {label:"Handle By", type:"text", handle:true, money:false});
+    a.sort = null;
+  }
+  function updateHandleSelect(){
+    var sel = document.getElementById("handle"), seen = {}, vals = [];
+    Object.keys(handleOf).forEach(function(k){ var v = handleOf[k]; if(!seen[v]){ seen[v] = true; vals.push(v); } });
+    vals.sort(function(a,b){ return a.localeCompare(b); });
+    if(handleFilter && vals.indexOf(handleFilter)<0) handleFilter = "";
+    var key = vals.join("|");
+    if(sel.getAttribute("data-key")!==key){
+      sel.textContent = "";
+      var o = document.createElement("option"); o.value = ""; o.textContent = "All"; sel.appendChild(o);
+      vals.forEach(function(v){ var x = document.createElement("option"); x.value = v; x.textContent = v; sel.appendChild(x); });
+      sel.setAttribute("data-key", key);
+    }
+    sel.value = handleFilter;
+  }
+  function deriveWeek(){
+    var f = state.follow, w = state.week;
+    w.status = f.status; w.err = f.err; w.cust = 0; weekTot = [];
+    weekIgnored = 0;
+    if(f.status!=="ok"){ w.cols = []; w.rows = []; return; }
+    var di = -1, bi = -1;
+    f.cols.forEach(function(c,k){
+      if(di<0 && /receive\s*payment\s*date/i.test(c.label)) di = k;
+      if(bi<0 && /estimated\s*balance/i.test(c.label)) bi = k;
+    });
+    w.cols = [
+      {label:"Customer Name", type:"text"}, {label:"Status", type:"text"},
+      {label:"Week Start (Mon)", type:"date"}, {label:"Week End (Sun)", type:"date"},
+      {label:"Records", type:"num", right:true}, {label:"Estimated Balance", type:"num", money:true}
+    ];
+    w.rows = [];
+    if(di<0 || bi<0 || f.cust<0){ w.missing = true; return; }
+    w.missing = false;
+    var now = new Date();
+    var s0 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay()+6)%7));
+    var names = ["This Week","Next Week","Week After"];
+    var buckets = [0,1,2].map(function(i){
+      var st0 = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate()+7*i);
+      return {start:st0, end:new Date(st0.getFullYear(), st0.getMonth(), st0.getDate()+6), n:0, s:0, per:{}};
+    });
+    visible("follow").forEach(function(r){
+      var b = num(r[bi]); if(b===null || b<=0) return;
+      var t = parseDate(r[di]); if(t===null){ weekIgnored++; return; }
+      var d = new Date(t); var start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay()+6)%7));
+      var off = Math.round((start.getTime() - s0.getTime()) / 604800000);
+      if(off<0 || off>2) return;
+      var o = buckets[off], nm = r[f.cust];
+      o.n++; o.s += b;
+      var p = o.per[nm] || (o.per[nm] = {n:0, s:0}); p.n++; p.s += b;
+    });
+    buckets.forEach(function(o,i){
+      weekTot.push({label:names[i], range:dstr(o.start).slice(0,5) + "–" + dstr(o.end).slice(0,5), n:o.n, s:o.s});
+      Object.keys(o.per).sort(function(a,b){ return o.per[b].s - o.per[a].s; }).forEach(function(nm){
+        w.rows.push([nm, names[i], dstr(o.start), dstr(o.end), String(o.per[nm].n), String(o.per[nm].s)]);
+      });
+    });
+  }
+
+  // Customers who owe money in an Aging month column (key: name|monthKey)
+  // owed[name] = list of {mk, amt}: Aging amounts by month column; "Before July" has mk = -Infinity (counts for every month)
+  function computeOwed(){
+    owed = {}; var a = state.aging; if(a.status!=="ok" || a.cust<0) return;
+    var now = new Date(), ny = now.getFullYear(), nm = now.getMonth();
+    a.cols.forEach(function(c,k){
+      var lab = c.label.trim().toLowerCase(), mk;
+      if(/^before/.test(lab)) mk = -Infinity;
+      else if(MONTHIDX[lab]!==undefined){ var m = MONTHIDX[lab]; mk = (m<=nm ? ny : ny-1)*12 + m; }
+      else return;
+      a.rows.forEach(function(r){
+        var n = num(r[k]); if(n===null) return;
+        (owed[r[a.cust]] || (owed[r[a.cust]] = [])).push({mk:mk, amt:n});
+      });
+    });
+  }
+  // Owes money in month mk = the Aging amounts for that month and every earlier month add up to more than 0
+  function owes(name, mk){
+    var l = owed[name]; if(!l) return false;
+    var sum = 0; l.forEach(function(x){ if(x.mk <= mk) sum += x.amt; });
+    return sum > 0.004;
+  }
+
+  // Highest collection stage reached per customer, from the Action sheet (1 = Final Reminder ... 4 = Final Action Remark)
+  function computeStages(){
+    stageOf = {}; var a = state.action; if(a.status!=="ok" || a.cust<0) return;
+    var idx = STAGES.map(function(s){ var f = -1; a.cols.forEach(function(c,k){ if(f<0 && s.re.test(c.label.trim())) f = k; }); return f; });
+    a.rows.forEach(function(r){
+      var nm = r[a.cust];
+      idx.forEach(function(k,i){ if(k>=0 && r[k]!=="" && (stageOf[nm]||0) < i+1) stageOf[nm] = i+1; });
+    });
+  }
+
+  // Sales person per customer (from the Aging "Sales" column) and the Sales drop-down
+  function computeSales(){
+    salesOf = {}; var a = state.aging; if(a.status!=="ok" || a.cust<0) return;
+    var si = -1; a.cols.forEach(function(c,k){ if(si<0 && /^sales$/i.test(c.label.trim())) si = k; });
+    if(si<0) return;
+    a.rows.forEach(function(r){ if(r[si]!=="") salesOf[r[a.cust]] = r[si]; });
+  }
+  function updateSalesSelect(){
+    var sel = document.getElementById("sales"), seen = {}, vals = [];
+    Object.keys(salesOf).forEach(function(k){ var v = salesOf[k]; if(!seen[v]){ seen[v] = true; vals.push(v); } });
+    vals.sort(function(a,b){ return a.localeCompare(b); });
+    if(salesFilter && vals.indexOf(salesFilter)<0) salesFilter = "";
+    var key = vals.join("|");
+    if(sel.getAttribute("data-key")!==key){
+      sel.textContent = "";
+      var o = document.createElement("option"); o.value = ""; o.textContent = "All"; sel.appendChild(o);
+      vals.forEach(function(v){ var x = document.createElement("option"); x.value = v; x.textContent = v; sel.appendChild(x); });
+      sel.setAttribute("data-key", key);
+    }
+    sel.value = salesFilter;
+  }
+
+  function sorted(rows, st){
+    if(!st.sort) return rows;
+    var k = st.sort.k, dir = st.sort.dir, c = st.cols[k];
+    function key(r){
+      var v = r[k];
+      if(c.type==="num"){ if(v==="") return c.pivot ? 0 : null; var n = num(v); return n; }
+      if(c.type==="date"){ return v==="" ? null : parseDate(v); }
+      return v==="" ? null : v;
+    }
+    var keyed = rows.map(function(r,i){ return {r:r,i:i,k:key(r)}; });
+    keyed.sort(function(a,b){
+      if(a.k===null && b.k===null) return a.i-b.i;
+      if(a.k===null) return 1; if(b.k===null) return -1;
+      var d = (c.type==="text") ? String(a.k).localeCompare(String(b.k),undefined,{numeric:true,sensitivity:"base"}) : a.k-b.k;
+      return d!==0 ? d*dir : a.i-b.i;
+    });
+    return keyed.map(function(x){ return x.r; });
+  }
+
+  function errCopy(e){
+    var c = e && e.code;
+    if(c==="server_not_connected") return {t:"Could not read Google Sheets. Please contact Yvonne."};
+    if(c==="needs_reauth") return {t:"Session expired. Please refresh the page to sign in again."};
+    if(c==="selection_required") return {t:"You have more than one Google Sheets connector. Choose one in the prompt.", retry:true};
+    if(c==="not_in_manifest"||c==="approval_required"||c==="consent_required") return {t:"This page has not been allowed to read your Google Sheets yet.", retry:true, label:"Allow and retry"};
+    if(c==="blocked_by_policy") return {t:"Your organisation policy does not allow this page to read Google Sheets."};
+    if(c==="tool_error") return {t:"Google Sheets returned an error: " + esc(e.message).slice(0,200) + ". Check that your account can open this spreadsheet.", retry:true};
+    if(c==="server_unavailable"||c==="upstream_error") return {t:"Cannot reach Google Sheets right now. Try again in a moment.", retry:true};
+    return {t:"Could not read the data (" + esc(c||"unknown") + ").", retry:true};
+  }
+
+  function el(tag, cls, text){ var n=document.createElement(tag); if(cls) n.className=cls; if(text!=null) n.textContent=text; return n; }
+
+  function renderSection(s){
+    var st = state[s.key];
+    var sec = el("section","tbl"); sec.id = "sec-"+s.key;
+    var th = el("div","th"); th.appendChild(el("h2",null,s.title));
+    sec.appendChild(th);
+    if(st.status==="loading"){ sec.appendChild(el("div","state","Loading…")); return sec; }
+    if(st.status==="error"){
+      var c = errCopy(st.err); var box = el("div","state err",c.t);
+      if(c.retry){ var b = el("button","btn",c.label||"Retry"); b.setAttribute("data-retry","1"); box.appendChild(document.createElement("br")); box.appendChild(b); }
+      sec.appendChild(box); return sec;
+    }
+    var rows = sorted(visible(s.key), st);
+    th.appendChild(el("span","meta","Showing " + Math.min(rows.length, st.shown) + " / " + rows.length + " rows (total " + st.rows.length + ")"));
+    if(s.pivot){
+      var lg = el("div","legend"); lg.appendChild(el("span","sw")); lg.appendChild(el("span",null,"Cream = the customer still owes money in this month or earlier months (Aging columns Oct / Sep / Aug / Jul / Before July) but made no payment this month. Amounts are the Bank Incoming Document Total summed by month."));
+      sec.appendChild(lg);
+    }
+    if(s.key==="aging" && st.cols.some(function(c){ return c.dso; })){
+      var lg4 = el("div","legend");
+      lg4.appendChild(el("span",null,"DSO (days) = Balance Due / total Sales Amount (Sales Analysis Report by Custom) x " + dsoN + " Sales Amount columns x 30, rounded to a whole number. Blank when the customer has no sales."));
+      sec.appendChild(lg4);
+    }
+    if(s.key==="action"){
+      var lg3 = el("div","legend"); var yr = new Date().getFullYear();
+      lg3.appendChild(el("span",null,"Showing only " + yr + " and " + (yr-1) + " (by Timestamp year). " + actionHidden + " older rows are hidden."));
+      sec.appendChild(lg3);
+    }
+    if(s.derived){
+      var lg2 = el("div","legend");
+      lg2.appendChild(el("span",null,"From AR Follow Up: only This Week, Next Week and Week After (Mon to Sun), grouped by Estimated Receive Payment Date. Amount is Estimated Balance (above 0 only). " + weekIgnored + " records without a date are not counted."));
+      sec.appendChild(lg2);
+      if(st.missing){ sec.appendChild(el("div","state err","AR Follow Up has no Estimated Receive Payment Date or Estimated Balance column.")); return sec; }
+    }
+    if(!s.derived && st.cust<0 && !st.cols.length){ sec.appendChild(el("div","state err","Cannot find the required columns (Customer / Date / Document Total).")); return sec; }
+    if(!s.derived && st.cust<0){ sec.appendChild(el("div","state err","No Customer Name column found, so this table cannot be linked.")); }
+    if(!rows.length){
+      sec.appendChild(el("div","state", (selected!==null || stageFilter || salesFilter || handleFilter) && !s.derived ? "No records match the selected customer / stage / sales / handle by." : (s.derived ? "No expected receipts." : (st.rows.length ? "No rows match the search." : "This table has no data."))));
+      return sec;
+    }
+    var wrap = el("div","scroll"); wrap.setAttribute("data-scroll", s.key);
+    var tb = el("table"); var thead = el("thead"); var hr = el("tr");
+    st.cols.forEach(function(c,k){
+      if(c.hide) return;
+      var h = el("th", (c.money||c.pivot||c.right?"num":"") + (k===st.cust?" first":""));
+      var dir = st.sort && st.sort.k===k ? st.sort.dir : 0;
+      h.setAttribute("aria-sort", dir===1?"ascending":dir===-1?"descending":"none");
+      var b = el("button","sortbtn"); b.type="button"; b.setAttribute("data-sort", String(k)); b.title = "Click to sort";
+      b.appendChild(el("span",null,c.label)); b.appendChild(el("span","ind", dir===1?"▲":dir===-1?"▼":"↕"));
+      h.appendChild(b); hr.appendChild(h);
+    });
+    thead.appendChild(hr); tb.appendChild(thead);
+    var tbody = el("tbody");
+    rows.slice(0, st.shown).forEach(function(r){
+      var tr = el("tr", selected!==null && r[st.cust]===selected ? "isel" : "");
+      st.cols.forEach(function(c,k){
+        if(c.hide) return;
+        var td = el("td"); var v = r[k];
+        if(k===st.cust){
+          td.className = "cname";
+          var b = el("button","cust" + (stageOf[v] ? " s"+stageOf[v] : ""),v); b.type="button"; b.setAttribute("data-name", v);
+          if(stageOf[v]) b.title = STAGES[stageOf[v]-1].label;
+          td.appendChild(b);
+        }else if(c.pivot && v===""){
+          td.className = "num" + (c.mk!==undefined && owes(r[st.cust], c.mk) ? " gap" : "");
+        }else if(c.money && num(v)!==null){
+          var n = num(v); td.className = "num" + (n<0?" neg":""); td.textContent = fmt(n);
+        }else if(c.right){
+          td.className = "num"; td.textContent = v;
+        }else{
+          if(c.wide) td.className = "wide"; td.textContent = v;
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    tb.appendChild(tbody);
+    if(s.pivot || s.derived){
+      var tf = el("tfoot"), fr = el("tr");
+      st.cols.forEach(function(c,k){
+        var td = el("td", (c.pivot||c.money||c.right) ? "num" : "");
+        if(k===(s.derived?0:st.cust)){ td.textContent = s.derived ? ("Total (" + rows.length + " rows)") : ("Total (" + rows.length + " customers)"); }
+        else if(c.pivot || c.money || c.right){ var sum = 0; rows.forEach(function(r){ var n = num(r[k]); if(n!==null) sum += n; }); td.textContent = c.right ? String(sum) : fmt(sum); }
+        fr.appendChild(td);
+      });
+      tf.appendChild(fr); tb.appendChild(tf);
+    }
+    wrap.appendChild(tb); sec.appendChild(wrap);
+    if(rows.length > st.shown){
+      var more = el("div","more"); var mb = el("button","btn","Show more"); mb.setAttribute("data-more", s.key);
+      more.appendChild(mb); more.appendChild(el("span",null,(rows.length - st.shown) + " more rows")); sec.appendChild(more);
+    }
+    return sec;
+  }
+
+  // This Week / Next Week / Week After expected receipts, shown below the Aging totals
+  function appendWeekTiles(box){
+    if(!weekTot.length) return;
+    var row = el("div","kpirow");
+    weekTot.forEach(function(x){
+      var d = el("div","kpi");
+      d.appendChild(el("div","k",x.label + " Expected Receipts"));
+      d.appendChild(el("div","v",fmt(x.s)));
+      d.appendChild(el("div","k",x.range + " · " + x.n + (x.n===1 ? " record" : " records")));
+      row.appendChild(d);
+    });
+    box.appendChild(row);
+  }
+
+  function renderKpis(){
+    var box = document.getElementById("kpis"); var st = state.aging;
+    box.textContent = "";
+    if(st.status!=="ok"){ appendWeekTiles(box); box.hidden = !weekTot.length; return; }
+    var rows = visible("aging").filter(function(r){ return !/^(grand\s+)?total$/i.test(r[st.cust]||""); });
+    var any = false, row1 = el("div","kpirow");
+    st.cols.forEach(function(c,k){
+      if(!c.money) return; any = true;
+      var sum = 0; rows.forEach(function(r){ var n = num(r[k]); if(n!==null) sum += n; });
+      var d = el("div","kpi" + (/balance/i.test(c.label)?" main":""));
+      d.appendChild(el("div","k",c.label));
+      d.appendChild(el("div","v" + (sum<0?" neg":""), fmt(sum)));
+      row1.appendChild(d);
+    });
+    if(row1.childNodes.length) box.appendChild(row1);
+    var row2 = el("div","kpirow");
+    var d2 = el("div","kpi"); d2.appendChild(el("div","k","Aging Customers")); d2.appendChild(el("div","v",String(rows.length))); row2.appendChild(d2);
+    box.appendChild(row2);
+    appendWeekTiles(box);
+    box.hidden = !any && !weekTot.length;
+  }
+
+  function render(){
+    var app = document.getElementById("app");
+    var pos = {};
+    document.querySelectorAll("[data-scroll]").forEach(function(n){ pos[n.getAttribute("data-scroll")] = [n.scrollTop, n.scrollLeft]; });
+    app.textContent = "";
+    computeStages(); computeSales(); updateSalesSelect(); computeHandle(); updateHandleSelect(); computeOwed(); deriveWeek();
+    var sb = document.getElementById("stagebar"); sb.textContent = "";
+    if(state.action.status==="ok"){
+      sb.hidden = false;
+      sb.appendChild(el("span",null, stageFilter ? ("Showing only \u201c" + STAGES[stageFilter-1].label + "\u201d customers. Click again to clear:") : "Customer colour (highest Action stage, click to filter):"));
+      var cnt = [0,0,0,0,0]; Object.keys(stageOf).forEach(function(n){ cnt[stageOf[n]]++; });
+      STAGES.forEach(function(s,i){
+        var b = el("button","chip s"+(i+1)+(stageFilter===i+1?" on":""),(stageFilter===i+1 ? "✓ " : "● ") + s.label + " (" + cnt[i+1] + ")");
+        b.type = "button"; b.setAttribute("aria-pressed", stageFilter===i+1?"true":"false");
+        b.addEventListener("click", function(ev){ ev.stopPropagation(); toggleStage(i+1); });
+        sb.appendChild(b);
+      });
+    }else{ sb.hidden = true; }
+    var holder = el("div"); holder.style.cssText = "display:flex;flex-direction:column;gap:16px";
+    SHEETS.forEach(function(s){ if(!s.hidden) holder.appendChild(renderSection(s)); });
+    app.appendChild(holder);
+    document.querySelectorAll("[data-scroll]").forEach(function(n){ var p = pos[n.getAttribute("data-scroll")]; if(p){ n.scrollTop = p[0]; n.scrollLeft = p[1]; } });
+    renderKpis();
+    var bar = document.getElementById("selbar");
+    if(selected!==null){
+      bar.hidden = false;
+      document.getElementById("selname").textContent = selected;
+      document.getElementById("selcounts").textContent = SHEETS.filter(function(s){ return !s.derived && !s.hidden; }).map(function(s){
+        var short = s.key==="bank" ? "Bank" : s.title;
+        return state[s.key].status==="ok" ? short + " " + visible(s.key).length : short + " –";
+      }).join("  ·  ");
+    }else{ bar.hidden = true; }
+    var u = document.getElementById("updated");
+    u.textContent = stamp ? ("Data updated " + new Date(stamp).toLocaleString("en-GB",{hour12:false})) : (mcp ? "Loading…" : "");
+  }
+
+  function select(name){
+    selected = (selected===name) ? null : name;
+    SHEETS.forEach(function(s){ state[s.key].shown = PAGE; });
+    render();
+    if(selected!==null){ window.scrollTo({top:0,behavior:"smooth"}); }
+  }
+
+  function toggleStage(v){
+    stageFilter = (stageFilter===v) ? 0 : v;
+    SHEETS.forEach(function(s){ state[s.key].shown = PAGE; });
+    render();
+  }
+
+  var onDocClick = function(ev){
+    var t = ev.target;
+    if(!(t instanceof Element)) return;
+    var cu = t.closest(".cust"); if(cu){ select(cu.getAttribute("data-name")); return; }
+    var so = t.closest("[data-sort]");
+    if(so){
+      var sec = so.closest("section"); var key = sec && sec.id.replace(/^sec-/,""); var st = state[key];
+      if(st){
+        var k = +so.getAttribute("data-sort");
+        if(!st.sort || st.sort.k!==k) st.sort = {k:k, dir:1};
+        else if(st.sort.dir===1) st.sort = {k:k, dir:-1};
+        else st.sort = null;
+        st.shown = PAGE; render();
+      }
+      return;
+    }
+    var mo = t.closest("[data-more]"); if(mo){ state[mo.getAttribute("data-more")].shown += 200; render(); return; }
+    if(t.closest("[data-retry]")){ loadAll(true); return; }
+  };
+  try{ if(window.__peplClick) document.removeEventListener("click", window.__peplClick); }catch(e){}
+  window.__peplClick = onDocClick; document.addEventListener("click", onDocClick);
+  document.getElementById("sales").addEventListener("change", function(e){
+    salesFilter = e.target.value; SHEETS.forEach(function(s){ state[s.key].shown = PAGE; }); render();
+  });
+  document.getElementById("handle").addEventListener("change", function(e){
+    handleFilter = e.target.value; SHEETS.forEach(function(s){ state[s.key].shown = PAGE; }); render();
+  });
+  document.getElementById("clear").addEventListener("click", function(){ selected = null; render(); });
+  document.getElementById("refresh").addEventListener("click", function(){ loadAll(true); });
+  document.getElementById("q").addEventListener("input", function(e){
+    query = e.target.value; SHEETS.forEach(function(s){ state[s.key].shown = PAGE; }); render();
+  });
+
+  render();
+  (async function(){
+    mcp = serverApi;
+    if(!mcp){
+      SHEETS.forEach(function(s){ state[s.key].status="error"; state[s.key].err={code:"capability_disabled"}; });
+      render();
+      document.getElementById("updated").textContent = "Cannot load data.";
+      return;
+    }
+    loadAll(false);
+  })();
+})();
+</script>
