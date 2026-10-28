@@ -511,7 +511,7 @@ h1{font-size:14pt}
   function errCopy(e){
     var c = e && e.code;
     if(c==="server_not_connected") return {t:"Could not read Google Sheets. Please contact Yvonne."};
-    if(c==="needs_reauth") return {t:"Session expired. Please refresh the page to sign in again."};
+    if(c==="needs_reauth") return {t:"Session expired. Session expired. Please refresh the page and sign in again."};
     if(c==="selection_required") return {t:"You have more than one Google Sheets connector. Choose one in the prompt.", retry:true};
     if(c==="not_in_manifest"||c==="approval_required"||c==="consent_required") return {t:"This page has not been allowed to read your Google Sheets yet.", retry:true, label:"Allow and retry"};
     if(c==="blocked_by_policy") return {t:"Your organisation policy does not allow this page to read Google Sheets."};
