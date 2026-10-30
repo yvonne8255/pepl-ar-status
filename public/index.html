@@ -30,7 +30,13 @@
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.wrap{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.wrap{max-width:1800px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:16px 16px;align-items:start}
+.wrap>*{grid-column:1;min-width:0}
+.wrap>.side{grid-column:2;grid-row:1 / span 6;position:sticky;top:max(8px,env(safe-area-inset-top,0px));align-self:start;max-height:calc(100vh - 16px);overflow:auto;z-index:6}
+.side .kpis,.side .kpirow{display:flex;flex-direction:column;gap:8px}
+.side .kpirow+.kpirow{border-top:1px solid var(--grid);padding-top:8px}
+.side .kpi{padding:6px 10px}
+@media (max-width:900px){.wrap{display:flex;flex-direction:column}.wrap>.side{position:static;max-height:none;order:-1}.side .kpirow{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
 h1{font-family:var(--font-display);font-weight:700;font-size:clamp(26px,4vw,36px);letter-spacing:.01em;line-height:1.05;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin-top:4px;font-size:13px}
@@ -135,13 +141,13 @@ h1{font-size:14pt}
   <div class="updated" id="updated" aria-live="polite">Loading…</div>
   <div class="pin" id="pin">
     <div class="filters"><label class="salesbox" for="sales">Sales <select id="sales"><option value="">All</option></select></label><label class="salesbox" for="handle">Handle By <select id="handle"><option value="">All</option></select></label><div class="stagebar" id="stagebar" hidden></div></div>
-    <div class="kpis" id="kpis" hidden></div>
     <div class="selbar" id="selbar" hidden>
       <span>Selected customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
       <button class="btn" id="clear">Clear</button>
     </div>
   </div>
   <div id="app"></div>
+  <aside class="side" aria-label="Totals"><div class="kpis" id="kpis" hidden></div></aside>
 </div>
 
 <script>
