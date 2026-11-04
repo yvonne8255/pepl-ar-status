@@ -11,6 +11,7 @@ ${err ? '<p style="color:#b42318;margin:0 0 10px">Wrong password.</p>' : ""}
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  if (process.env.OPEN_ACCESS === "1") { res.writeHead(302, { Location: "/" }); return res.end(); }
   if (!process.env.SITE_PASSWORD || !process.env.AUTH_SECRET) return res.status(500).send("Login is not configured yet.");
   if (req.method === "POST") {
     const body = req.body && typeof req.body === "object" ? req.body : {};
