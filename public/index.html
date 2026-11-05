@@ -125,6 +125,25 @@ select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid 
 /* Calibri 10 pt everywhere (title slightly larger) */
 body,table,th,td,button,input,select,.sub,.updated,.legend,.th h2,.th .meta,.kpi .k,.kpi .v,.pin .kpi .k,.pin .kpi .v,.stagebar,.selbar .counts,.more,.state,.cust,.chip{font-size:10pt}
 h1{font-size:14pt}
+/* Sample layout */
+.sub{display:none}
+header{align-items:center}
+.wrap{row-gap:8px}
+.layout{display:flex;flex-direction:column;gap:12px}
+.bottom{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) minmax(0,1.1fr);gap:12px;align-items:start}
+.bcol{display:flex;flex-direction:column;gap:12px;min-width:0}
+section.tbl .th{padding:6px 10px}
+section.tbl .scroll{margin:6px}
+.a-top .scroll{max-height:420px}
+.a-cr .scroll,.a-ar .scroll{max-height:560px}
+.a-ps .scroll,.a-ac .scroll{max-height:260px}
+.a-cr td,.a-ar td,.a-ps td,.a-ac td{white-space:normal}
+.a-cr td.cname,.a-ar td.cname,.a-ps td.cname,.a-ac td.cname{min-width:7rem;max-width:11rem}
+.a-cr td.wide{min-width:11rem}
+.a-ar td.cname{min-width:6rem;max-width:9rem}
+.a-ac td,.a-ac th{white-space:nowrap}
+.a-ac td.cname{white-space:normal}
+@media (max-width:1250px){.bottom{grid-template-columns:minmax(0,1fr)}}
 </style>
 
 <div class="wrap">
@@ -154,11 +173,12 @@ h1{font-size:14pt}
 (function(){
   var SERVER = "Google Sheets";
   var SHEETS = [
-    {key:"aging",  title:"Aging",        id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"Aging!A:Z"},
-    {key:"follow", title:"AR Follow Up", id:"1benIfpQNEmBE_TRhneGUmyUkHfjEs_DS8afpVSbEG0w", range:"'Form Responses 1'!A:O"},
-    {key:"week",   title:"Weekly Expected Receipts",  derived:true},
-    {key:"bank",   title:"Bank Incoming · Monthly Receipts", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'Bank Incoming'!A:G", pivot:true},
-    {key:"action", title:"Action",       id:"1qKdjS2GGt54lg6eM1A2VHtfVj6NgWLBG6Y_ZR6KocsY", range:"'Form responses 1'!A:O"},
+    {key:"aging",  title:"Aging",        id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"Aging!A:Z", area:"top", total:true},
+    {key:"follow", title:"Customer Reply", id:"1benIfpQNEmBE_TRhneGUmyUkHfjEs_DS8afpVSbEG0w", range:"'Form Responses 1'!A:O", area:"cr"},
+    {key:"week",   title:"Weekly Expected Receipts",  derived:true, hidden:true},
+    {key:"bank",   title:"AR Received", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'Bank Incoming'!A:G", recv:true, area:"ar"},
+    {key:"pay",    title:"Payment Schedule", derived:true, area:"ps"},
+    {key:"action", title:"Action",       id:"1qKdjS2GGt54lg6eM1A2VHtfVj6NgWLBG6Y_ZR6KocsY", range:"'Form responses 1'!A:O", area:"ac"},
     {key:"sales",  title:"Sales Analysis", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'Sales Analysis Report by Custom'!A:Z", hidden:true},
     {key:"handle", title:"CC Handle By", id:"1ugrcdSuh5tPEQ0kgFBaqZh-BfI3dXCWvyvX4X3VULr4", range:"'CC Handle By'!A:B", hidden:true}
   ];
@@ -271,6 +291,20 @@ h1{font-size:14pt}
     return {cols:cols, rows:rows, cust:0};
   }
 
+  // Bank Incoming -> one row per payment: Date, Customer Name, Total (Document Total)
+  function buildReceived(values){
+    var head = (values[0]||[]).map(function(h){ return esc(h).trim().toLowerCase(); });
+    var ci = head.indexOf("customer"), di = head.indexOf("date"), ai = head.indexOf("document total");
+    if(ci<0||di<0||ai<0) return {cols:[], rows:[], cust:-1, bad:true};
+    var rows = [];
+    values.slice(1).forEach(function(r){
+      var name = esc(r[ci]).trim(), d = esc(r[di]).trim(), a = num(r[ai]);
+      if(!name || a===null) return;
+      rows.push([d, name, String(a)]);
+    });
+    return {cols:[{label:"Date",type:"date",money:false}, {label:"Customer Name",type:"text",money:false}, {label:"Total",type:"num",money:true}], rows:rows, cust:1};
+  }
+
   function delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
   async function fetchSheet(s, refresh){
@@ -297,10 +331,14 @@ h1{font-size:14pt}
     results.forEach(function(r,k){
       var s = fetched[k], st = state[s.key];
       if(r.status==="fulfilled"){
-        var m = s.pivot ? buildBank(valuesOf(r.value)) : build(valuesOf(r.value));
-        if(s.key==="follow") m.cols.forEach(function(c){ if(/^(timestamp|payment paid|estimated balance)$/i.test(c.label.trim())) c.hide = true; });
+        var m = s.recv ? buildReceived(valuesOf(r.value)) : build(valuesOf(r.value));
+        if(s.key==="follow") m.cols.forEach(function(c){ if(/^(timestamp|payment paid|estimated balance|estm?ate receive payment date|estm?ate receive amount)$/i.test(c.label.trim())) c.hide = true; });
         if(s.key==="action"){ m = filterAction(m); m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; }); }
         st.cols=m.cols; st.rows=m.rows; st.cust=m.cust; st.status="ok"; st.err=null; st.shown=PAGE;
+        if(!st.sortInit && (s.key==="follow" || s.key==="bank")){
+          var dk = -1; st.cols.forEach(function(c,k){ if(dk<0 && /^date$/i.test(c.label.trim())) dk = k; });
+          if(dk>=0){ st.sort = {k:dk, dir:-1}; st.sortInit = true; }
+        }
         if(st.sort && !st.cols[st.sort.k]) st.sort = null;
         times.push(r.value.cache ? r.value.cache.storedAt : Date.now());
       }else{
@@ -440,6 +478,26 @@ h1{font-size:14pt}
     });
   }
 
+  // Payment Schedule: Customer Name / Estimate Receive Payment Date / Estimated Balance (Follow Up rows with a balance above 0), oldest date first
+  function derivePay(){
+    var f = state.follow, p = state.pay;
+    p.status = f.status; p.err = f.err; p.cust = 0; p.shown = p.shown || PAGE;
+    p.cols = [{label:"Customer Name",type:"text",money:false}, {label:"Estimate Receive Payment Date",type:"date",money:false}, {label:"Estimated Balance",type:"num",money:true}];
+    p.rows = [];
+    if(f.status!=="ok" || f.cust<0) return;
+    var di = -1, bi = -1;
+    f.cols.forEach(function(c,k){
+      if(di<0 && /receive\s*payment\s*date/i.test(c.label)) di = k;
+      if(bi<0 && /estimated\s*balance/i.test(c.label)) bi = k;
+    });
+    if(di<0 || bi<0) return;
+    f.rows.forEach(function(r){
+      var b = num(r[bi]); if(b===null || b<=0) return;
+      p.rows.push([r[f.cust], r[di], String(b)]);
+    });
+    if(!p.sortInit){ p.sort = {k:1, dir:1}; p.sortInit = true; }
+  }
+
   // Customers who owe money in an Aging month column (key: name|monthKey)
   // owed[name] = list of {mk, amt}: Aging amounts by month column; "Before July" has mk = -Infinity (counts for every month)
   function computeOwed(){
@@ -541,30 +599,26 @@ h1{font-size:14pt}
     }
     var rows = sorted(visible(s.key), st);
     th.appendChild(el("span","meta","Showing " + Math.min(rows.length, st.shown) + " / " + rows.length + " rows (total " + st.rows.length + ")"));
-    if(s.pivot){
+    if(false){
       var lg = el("div","legend"); lg.appendChild(el("span","sw")); lg.appendChild(el("span",null,"Cream = the customer still owes money in this month or earlier months (Aging columns Oct / Sep / Aug / Jul / Before July) but made no payment this month. Amounts are the Bank Incoming Document Total summed by month."));
       sec.appendChild(lg);
-    }
-    if(s.key==="aging" && st.cols.some(function(c){ return c.dso; })){
-      var lg4 = el("div","legend");
-      lg4.appendChild(el("span",null,"DSO (days) = Balance Due / total Sales Amount (Sales Analysis Report by Custom) x " + dsoN + " Sales Amount columns x 30, rounded to a whole number. Blank when the customer has no sales."));
-      sec.appendChild(lg4);
     }
     if(s.key==="action"){
       var lg3 = el("div","legend"); var yr = new Date().getFullYear();
       lg3.appendChild(el("span",null,"Showing only " + yr + " and " + (yr-1) + " (by Timestamp year). " + actionHidden + " older rows are hidden."));
       sec.appendChild(lg3);
     }
-    if(s.derived){
+    if(s.derived && s.key==="week"){
       var lg2 = el("div","legend");
       lg2.appendChild(el("span",null,"From AR Follow Up: only This Week, Next Week and Week After (Mon to Sun), grouped by Estimated Receive Payment Date. Amount is Estimated Balance (above 0 only). " + weekIgnored + " records without a date are not counted."));
       sec.appendChild(lg2);
       if(st.missing){ sec.appendChild(el("div","state err","AR Follow Up has no Estimated Receive Payment Date or Estimated Balance column.")); return sec; }
     }
     if(!s.derived && st.cust<0 && !st.cols.length){ sec.appendChild(el("div","state err","Cannot find the required columns (Customer / Date / Document Total).")); return sec; }
+    if(s.key==="pay" && !st.rows.length && state.follow.status==="ok" && !state.follow.cols.some(function(c){ return /receive\s*payment\s*date/i.test(c.label); })){ sec.appendChild(el("div","state err","AR Follow Up has no Estimated Receive Payment Date column.")); return sec; }
     if(!s.derived && st.cust<0){ sec.appendChild(el("div","state err","No Customer Name column found, so this table cannot be linked.")); }
     if(!rows.length){
-      sec.appendChild(el("div","state", (selected!==null || stageFilter || salesFilter || handleFilter) && !s.derived ? "No records match the selected customer / stage / sales / handle by." : (s.derived ? "No expected receipts." : (st.rows.length ? "No rows match the search." : "This table has no data."))));
+      sec.appendChild(el("div","state", (selected!==null || stageFilter || salesFilter || handleFilter) && !s.derived ? "No records match the selected customer / stage / sales / handle by." : (s.derived ? "No payments scheduled." : (st.rows.length ? "No rows match the search." : "This table has no data."))));
       return sec;
     }
     var wrap = el("div","scroll"); wrap.setAttribute("data-scroll", s.key);
@@ -574,7 +628,7 @@ h1{font-size:14pt}
       var h = el("th", (c.money||c.pivot||c.right?"num":"") + (k===st.cust?" first":""));
       var dir = st.sort && st.sort.k===k ? st.sort.dir : 0;
       h.setAttribute("aria-sort", dir===1?"ascending":dir===-1?"descending":"none");
-      var b = el("button","sortbtn"); b.type="button"; b.setAttribute("data-sort", String(k)); b.title = "Click to sort";
+      var b = el("button","sortbtn"); b.type="button"; b.setAttribute("data-sort", String(k)); b.title = c.dso ? ("DSO (days) = Balance Due / total Sales Amount x " + dsoN + " Sales Amount columns x 30, rounded. Blank when no sales. Click to sort.") : "Click to sort";
       b.appendChild(el("span",null,c.label)); b.appendChild(el("span","ind", dir===1?"▲":dir===-1?"▼":"↕"));
       h.appendChild(b); hr.appendChild(h);
     });
@@ -604,12 +658,14 @@ h1{font-size:14pt}
       tbody.appendChild(tr);
     });
     tb.appendChild(tbody);
-    if(s.pivot || s.derived){
+    if(s.total){
       var tf = el("tfoot"), fr = el("tr");
+      var trows = rows.filter(function(r){ return !/^(grand\s+)?total$/i.test(r[st.cust]||""); });
       st.cols.forEach(function(c,k){
-        var td = el("td", (c.pivot||c.money||c.right) ? "num" : "");
-        if(k===(s.derived?0:st.cust)){ td.textContent = s.derived ? ("Total (" + rows.length + " rows)") : ("Total (" + rows.length + " customers)"); }
-        else if(c.pivot || c.money || c.right){ var sum = 0; rows.forEach(function(r){ var n = num(r[k]); if(n!==null) sum += n; }); td.textContent = c.right ? String(sum) : fmt(sum); }
+        if(c.hide) return;
+        var td = el("td", (c.money||c.right) ? "num" : "");
+        if(k===st.cust){ td.textContent = "Total"; }
+        else if(c.money || c.right){ var sum = 0; trows.forEach(function(r){ var n = num(r[k]); if(n!==null) sum += n; }); td.textContent = c.right ? String(sum) : fmt(sum); }
         fr.appendChild(td);
       });
       tf.appendChild(fr); tb.appendChild(tf);
@@ -663,7 +719,7 @@ h1{font-size:14pt}
     var pos = {};
     document.querySelectorAll("[data-scroll]").forEach(function(n){ pos[n.getAttribute("data-scroll")] = [n.scrollTop, n.scrollLeft]; });
     app.textContent = "";
-    computeStages(); computeSales(); updateSalesSelect(); computeHandle(); updateHandleSelect(); computeOwed(); deriveWeek();
+    computeStages(); computeSales(); updateSalesSelect(); computeHandle(); updateHandleSelect(); computeOwed(); deriveWeek(); derivePay();
     var sb = document.getElementById("stagebar"); sb.textContent = "";
     if(state.action.status==="ok"){
       sb.hidden = false;
@@ -676,8 +732,21 @@ h1{font-size:14pt}
         sb.appendChild(b);
       });
     }else{ sb.hidden = true; }
-    var holder = el("div"); holder.style.cssText = "display:flex;flex-direction:column;gap:16px";
-    SHEETS.forEach(function(s){ if(!s.hidden) holder.appendChild(renderSection(s)); });
+    // Layout like the sample: Aging on top; Customer Reply | AR Received | (Payment Schedule over Action) below
+    var holder = el("div","layout");
+    var bottom = el("div","bottom");
+    var cols3 = {cr:el("div","bcol bcr"), ar:el("div","bcol bar"), ps:el("div","bcol bps")};
+    cols3.ps.className = "bcol bps";
+    SHEETS.forEach(function(s){
+      if(s.hidden) return;
+      var sec = renderSection(s); sec.classList.add("a-"+s.area);
+      if(s.area==="top") holder.appendChild(sec);
+      else if(s.area==="cr") cols3.cr.appendChild(sec);
+      else if(s.area==="ar") cols3.ar.appendChild(sec);
+      else cols3.ps.appendChild(sec);
+    });
+    bottom.appendChild(cols3.cr); bottom.appendChild(cols3.ar); bottom.appendChild(cols3.ps);
+    holder.appendChild(bottom);
     app.appendChild(holder);
     document.querySelectorAll("[data-scroll]").forEach(function(n){ var p = pos[n.getAttribute("data-scroll")]; if(p){ n.scrollTop = p[0]; n.scrollLeft = p[1]; } });
     renderKpis();
@@ -686,7 +755,7 @@ h1{font-size:14pt}
       bar.hidden = false;
       document.getElementById("selname").textContent = selected;
       document.getElementById("selcounts").textContent = SHEETS.filter(function(s){ return !s.derived && !s.hidden; }).map(function(s){
-        var short = s.key==="bank" ? "Bank" : s.title;
+        var short = s.title;
         return state[s.key].status==="ok" ? short + " " + visible(s.key).length : short + " –";
       }).join("  ·  ");
     }else{ bar.hidden = true; }
