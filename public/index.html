@@ -298,7 +298,7 @@ h1{font-size:14pt}
       var s = fetched[k], st = state[s.key];
       if(r.status==="fulfilled"){
         var m = s.pivot ? buildBank(valuesOf(r.value)) : build(valuesOf(r.value));
-        if(s.key==="follow") m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; });
+        if(s.key==="follow") m.cols.forEach(function(c){ if(/^(timestamp|payment paid|estimated balance)$/i.test(c.label.trim())) c.hide = true; });
         if(s.key==="action"){ m = filterAction(m); m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; }); }
         st.cols=m.cols; st.rows=m.rows; st.cust=m.cust; st.status="ok"; st.err=null; st.shown=PAGE;
         if(st.sort && !st.cols[st.sort.k]) st.sort = null;
