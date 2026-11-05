@@ -299,6 +299,11 @@ h1{font-size:14pt}
       if(r.status==="fulfilled"){
         var m = s.pivot ? buildBank(valuesOf(r.value)) : build(valuesOf(r.value));
         if(s.key==="follow") m.cols.forEach(function(c){ if(/^(timestamp|payment paid|estimated balance)$/i.test(c.label.trim())) c.hide = true; });
+        if(s.key==="follow"){
+          // Hide rows whose Estimated Balance is 0 (blank stays visible)
+          var bi = -1; m.cols.forEach(function(c,k){ if(bi<0 && /^estimated balance$/i.test(c.label.trim())) bi = k; });
+          if(bi>=0) m.rows = m.rows.filter(function(r){ return num(r[bi])!==0; });
+        }
         if(s.key==="action"){ m = filterAction(m); m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; }); }
         st.cols=m.cols; st.rows=m.rows; st.cust=m.cust; st.status="ok"; st.err=null; st.shown=PAGE;
         if(st.sort && !st.cols[st.sort.k]) st.sort = null;
