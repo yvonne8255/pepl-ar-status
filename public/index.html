@@ -188,7 +188,7 @@ section.tbl .scroll{margin:6px}
     {re:/^sccb$/i, label:"SCCB"}, {re:/final\s*action\s*remark/i, label:"Final Action Remark"}
   ];
   var owed = {}, stageOf = {}, stageFilter = 0, salesOf = {}, salesFilter = "", handleOf = {}, handleFilter = "";
-  var PAGE = 100;
+  var PAGE = Infinity; // show all rows, no "Show more"
   var MONEY = /\b(balance|amount|overdue|paid|january|february|march|april|may|june|july|august|september|october|november|december|before july)\b/i;
   var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var state = {}; var selected = null; var query = "";
