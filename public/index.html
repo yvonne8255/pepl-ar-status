@@ -125,6 +125,15 @@ select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid 
 /* Calibri 10 pt everywhere (title slightly larger) */
 body,table,th,td,button,input,select,.sub,.updated,.legend,.th h2,.th .meta,.kpi .k,.kpi .v,.pin .kpi .k,.pin .kpi .v,.stagebar,.selbar .counts,.more,.state,.cust,.chip{font-size:10pt}
 h1{font-size:14pt}
+/* On Hold Remarks panel */
+.holdbox{margin-top:8px;border:1px solid var(--grid);border-radius:8px;background:var(--cream);overflow:hidden}
+.holdh{padding:6px 10px;font-weight:600;border-bottom:1px solid var(--grid)}
+.holdlist{max-height:300px;overflow:auto}
+.holditem{padding:6px 10px;border-bottom:1px solid var(--grid);background:var(--cream)}
+.holditem:last-child{border-bottom:0}
+.holditem.isel{outline:2px solid var(--sel);outline-offset:-2px}
+.holdtxt{margin-top:2px;white-space:normal;overflow-wrap:anywhere}
+.holdbox .cust{text-align:left;white-space:normal}
 /* Sample layout */
 .sub{display:none}
 header{align-items:center}
@@ -161,12 +170,12 @@ section.tbl .scroll{margin:6px}
   <div class="pin" id="pin">
     <div class="filters"><label class="salesbox" for="sales">Sales <select id="sales"><option value="">All</option></select></label><label class="salesbox" for="handle">Handle By <select id="handle"><option value="">All</option></select></label><div class="stagebar" id="stagebar" hidden></div></div>
     <div class="selbar" id="selbar" hidden>
-      <span>Selected customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
+      <span>Highlighted customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
       <button class="btn" id="clear">Clear</button>
     </div>
   </div>
   <div id="app"></div>
-  <aside class="side" aria-label="Totals"><div class="kpis" id="kpis" hidden></div></aside>
+  <aside class="side" aria-label="Totals"><div class="kpis" id="kpis" hidden></div><div class="holdbox" id="holdbox" hidden></div></aside>
 </div>
 
 <script>
@@ -332,6 +341,7 @@ section.tbl .scroll{margin:6px}
       var s = fetched[k], st = state[s.key];
       if(r.status==="fulfilled"){
         var m = s.recv ? buildReceived(valuesOf(r.value)) : build(valuesOf(r.value));
+        if(s.key==="aging") m.cols.forEach(function(c){ if(/on\s*hold\s*remarks?/i.test(c.label)) c.hide = true; });
         if(s.key==="follow") m.cols.forEach(function(c){ if(/^(timestamp|payment paid|estimated balance|estm?ate receive payment date|estm?ate receive amount)$/i.test(c.label.trim())) c.hide = true; });
         if(s.key==="action"){ m = filterAction(m); m.cols.forEach(function(c){ if(/^timestamp$/i.test(c.label.trim())) c.hide = true; }); }
         st.cols=m.cols; st.rows=m.rows; st.cust=m.cust; st.status="ok"; st.err=null; st.shown=PAGE;
@@ -360,7 +370,6 @@ section.tbl .scroll{margin:6px}
       if(stageFilter && stageOf[n]!==stageFilter) return false;
       if(salesFilter && salesOf[n]!==salesFilter) return false;
       if(handleFilter && handleOf[n]!==handleFilter) return false;
-      if(selected!==null) return n===selected;
       return q==="" || n.toLowerCase().indexOf(q)>=0;
     });
   }
@@ -714,6 +723,25 @@ section.tbl .scroll{margin:6px}
     box.hidden = !any && !weekTot.length;
   }
 
+  // On Hold Remarks (from Aging) shown under the weekly tiles, light yellow
+  function renderHold(){
+    var box = document.getElementById("holdbox"); box.textContent = "";
+    var a = state.aging; if(a.status!=="ok" || a.cust<0){ box.hidden = true; return; }
+    var hi = -1; a.cols.forEach(function(c,k){ if(hi<0 && /on\s*hold\s*remarks?/i.test(c.label)) hi = k; });
+    if(hi<0){ box.hidden = true; return; }
+    var rows = visible("aging").filter(function(r){ return String(r[hi]).trim()!=="" && !/^(grand\s+)?total$/i.test(r[a.cust]||""); });
+    if(selected!==null) rows = rows.filter(function(r){ return r[a.cust]===selected; }).concat(rows.filter(function(r){ return r[a.cust]!==selected; }));
+    box.hidden = !rows.length; if(!rows.length) return;
+    box.appendChild(el("div","holdh","On Hold Remarks (" + rows.length + ")"));
+    var list = el("div","holdlist");
+    rows.forEach(function(r){
+      var it = el("div","holditem" + (selected!==null && r[a.cust]===selected ? " isel" : ""));
+      var b = el("button","cust" + (stageOf[r[a.cust]] ? " s"+stageOf[r[a.cust]] : ""), r[a.cust]); b.type = "button"; b.setAttribute("data-name", r[a.cust]);
+      it.appendChild(b); it.appendChild(el("div","holdtxt",r[hi])); list.appendChild(it);
+    });
+    box.appendChild(list);
+  }
+
   function render(){
     var app = document.getElementById("app");
     var pos = {};
@@ -749,15 +777,12 @@ section.tbl .scroll{margin:6px}
     holder.appendChild(bottom);
     app.appendChild(holder);
     document.querySelectorAll("[data-scroll]").forEach(function(n){ var p = pos[n.getAttribute("data-scroll")]; if(p){ n.scrollTop = p[0]; n.scrollLeft = p[1]; } });
-    renderKpis();
+    renderKpis(); renderHold();
     var bar = document.getElementById("selbar");
     if(selected!==null){
       bar.hidden = false;
       document.getElementById("selname").textContent = selected;
-      document.getElementById("selcounts").textContent = SHEETS.filter(function(s){ return !s.derived && !s.hidden; }).map(function(s){
-        var short = s.title;
-        return state[s.key].status==="ok" ? short + " " + visible(s.key).length : short + " –";
-      }).join("  ·  ");
+      document.getElementById("selcounts").textContent = "highlighted in every table";
     }else{ bar.hidden = true; }
     var u = document.getElementById("updated");
     u.textContent = stamp ? ("Data updated " + new Date(stamp).toLocaleString("en-GB",{hour12:false})) : (mcp ? "Loading…" : "");
@@ -767,7 +792,6 @@ section.tbl .scroll{margin:6px}
     selected = (selected===name) ? null : name;
     SHEETS.forEach(function(s){ state[s.key].shown = PAGE; });
     render();
-    if(selected!==null){ window.scrollTo({top:0,behavior:"smooth"}); }
   }
 
   function toggleStage(v){
