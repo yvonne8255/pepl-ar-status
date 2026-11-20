@@ -644,7 +644,7 @@ section.tbl .scroll{margin:6px}
     thead.appendChild(hr); tb.appendChild(thead);
     var tbody = el("tbody");
     rows.slice(0, st.shown).forEach(function(r){
-      var tr = el("tr", selected!==null && r[st.cust]===selected ? "isel" : "");
+      var tr = el("tr");
       st.cols.forEach(function(c,k){
         if(c.hide) return;
         var td = el("td"); var v = r[k];
