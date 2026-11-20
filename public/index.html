@@ -169,7 +169,7 @@ section.tbl .scroll{margin:6px}
   <div class="pin" id="pin">
     <div class="filters"><label class="salesbox" for="sales">Sales <select id="sales"><option value="">All</option></select></label><label class="salesbox" for="handle">Handle By <select id="handle"><option value="">All</option></select></label><div class="stagebar" id="stagebar" hidden></div></div>
     <div class="selbar" id="selbar" hidden>
-      <span>Highlighted customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
+      <span>Selected customer</span><b id="selname"></b><span class="counts" id="selcounts"></span>
       <button class="btn" id="clear">Clear</button>
     </div>
   </div>
@@ -369,6 +369,7 @@ section.tbl .scroll{margin:6px}
       if(stageFilter && stageOf[n]!==stageFilter) return false;
       if(salesFilter && salesOf[n]!==salesFilter) return false;
       if(handleFilter && handleOf[n]!==handleFilter) return false;
+      if(selected!==null) return n===selected;
       return q==="" || n.toLowerCase().indexOf(q)>=0;
     });
   }
@@ -783,7 +784,9 @@ section.tbl .scroll{margin:6px}
     if(selected!==null){
       bar.hidden = false;
       document.getElementById("selname").textContent = selected;
-      document.getElementById("selcounts").textContent = "highlighted in every table";
+      document.getElementById("selcounts").textContent = SHEETS.filter(function(s){ return !s.derived && !s.hidden; }).map(function(s){
+        return state[s.key].status==="ok" ? s.title + " " + visible(s.key).length : s.title + " –";
+      }).join("  ·  ");
     }else{ bar.hidden = true; }
     var u = document.getElementById("updated");
     u.textContent = stamp ? ("Data updated " + new Date(stamp).toLocaleString("en-GB",{hour12:false})) : (mcp ? "Loading…" : "");
@@ -793,6 +796,7 @@ section.tbl .scroll{margin:6px}
     selected = (selected===name) ? null : name;
     SHEETS.forEach(function(s){ state[s.key].shown = PAGE; });
     render();
+    if(selected!==null){ window.scrollTo({top:0,behavior:"smooth"}); }
   }
 
   function toggleStage(v){
