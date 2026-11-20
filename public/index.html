@@ -128,6 +128,8 @@ h1{font-size:14pt}
 /* On Hold Remarks panel */
 .holdbox{margin-top:8px;border:1px solid var(--grid);border-radius:6px;background:var(--cream);overflow:hidden;max-height:200px;overflow-y:auto}
 .holdbox[hidden]{display:none!important}
+.holdh{padding:4px 8px;font-weight:600;border-bottom:1px solid var(--grid)}
+.holdh:last-child{border-bottom:0}
 .holditem{padding:4px 8px;border-bottom:1px solid var(--grid);background:var(--cream);line-height:1.3}
 .holditem:last-child{border-bottom:0}
 .holdtxt{white-space:normal;overflow-wrap:anywhere}
@@ -723,15 +725,16 @@ section.tbl .scroll{margin:6px}
   // On Hold Date + On Hold Remarks (from Aging) of the clicked customer, small light-yellow box under the weekly tiles. Hidden when no customer is clicked.
   function renderHold(){
     var box = document.getElementById("holdbox"); box.textContent = "";
-    var a = state.aging; if(selected===null || a.status!=="ok" || a.cust<0){ box.hidden = true; return; }
+    var a = state.aging; if(a.status!=="ok" || a.cust<0){ box.hidden = true; return; }
+    box.hidden = false;
+    box.appendChild(el("div","holdh","On Hold Remarks"));
+    if(selected===null) return; // box and title stay; content only for the clicked customer
     var hi = -1, di = -1;
     a.cols.forEach(function(c,k){
       if(hi<0 && /on\s*hold\s*remarks?/i.test(c.label)) hi = k;
       if(di<0 && /on\s*hold\s*date/i.test(c.label)) di = k;
     });
     var rows = a.rows.filter(function(r){ return r[a.cust]===selected && ((hi>=0 && String(r[hi]).trim()!=="") || (di>=0 && String(r[di]).trim()!=="")); });
-    if(!rows.length){ box.hidden = true; return; }
-    box.hidden = false;
     rows.forEach(function(r){
       var it = el("div","holditem");
       if(di>=0 && String(r[di]).trim()!=="") it.appendChild(el("div","holdtxt","On Hold Date: " + r[di]));
