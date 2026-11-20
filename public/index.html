@@ -265,6 +265,14 @@ section.tbl .scroll{margin:6px}
     return new Date(y, +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0)).getTime();
   }
 
+  // Show every date as dd/mm/yy
+  function shortDate(v){
+    if(typeof v!=="string") return v;
+    var t = parseDate(v.trim()); if(t===null) return v;
+    var d = new Date(t);
+    return (d.getDate()<10?"0":"") + d.getDate() + "/" + (d.getMonth()+1<10?"0":"") + (d.getMonth()+1) + "/" + String(d.getFullYear()).slice(-2);
+  }
+
   function valuesOf(res){
     var p = res && res.payload;
     if(typeof p === "string"){ try{ p = JSON.parse(p); }catch(e){} }
@@ -394,6 +402,7 @@ section.tbl .scroll{margin:6px}
     if(times.length) stamp = Math.min.apply(null, times);
     applyDSO();
     applyHandle();
+    applyOrder();
     render();
   }
 
@@ -465,6 +474,33 @@ section.tbl .scroll{margin:6px}
     var pos = di>=0 ? di+1 : 1;
     a.rows.forEach(function(r){ r.splice(pos, 0, handleOf[r[a.cust]] || ""); });
     a.cols.splice(pos, 0, {label:"Handle By", type:"text", handle:true, money:false});
+    a.sort = null;
+  }
+  // Aging column order: Customer Name, DSO, Handle By, Group, Terms, Sales, Balance Due, then months newest -> oldest (Before ... last), then anything else
+  function applyOrder(){
+    var a = state.aging; if(a.status!=="ok" || a.cust<0) return;
+    var now = new Date(), ny = now.getFullYear(), nm = now.getMonth();
+    function rank(c,k){
+      var lab = c.label.trim().toLowerCase();
+      if(k===a.cust) return [0,0];
+      if(c.dso) return [1,0];
+      if(c.handle) return [2,0];
+      if(/^group$/.test(lab)) return [3,0];
+      if(/^terms?$/.test(lab)) return [4,0];
+      if(/^sales$/.test(lab)) return [5,0];
+      if(/balance/.test(lab)) return [6,0];
+      if(/^before/.test(lab)) return [8,0];
+      if(MONTHIDX[lab]!==undefined){ var m = MONTHIDX[lab]; return [7, -((m<=nm ? ny : ny-1)*12 + m)]; }
+      return [9,k];
+    }
+    var idx = a.cols.map(function(c,k){ return {k:k, r:rank(c,k)}; });
+    idx.sort(function(x,y){ return x.r[0]-y.r[0] || x.r[1]-y.r[1] || x.k-y.k; });
+    var order = idx.map(function(x){ return x.k; });
+    if(order.every(function(k,i){ return k===i; })) return;
+    var oldCust = a.cust;
+    a.cols = order.map(function(k){ return a.cols[k]; });
+    a.rows = a.rows.map(function(r){ return order.map(function(k){ return r[k]; }); });
+    a.cust = order.indexOf(oldCust);
     a.sort = null;
   }
   function updateHandleSelect(){
@@ -697,7 +733,7 @@ section.tbl .scroll{margin:6px}
         }else if(c.right){
           td.className = "num"; td.textContent = v;
         }else{
-          if(c.wide) td.className = "wide"; td.textContent = v;
+          if(c.wide) td.className = "wide"; td.textContent = shortDate(v);
         }
         tr.appendChild(td);
       });
