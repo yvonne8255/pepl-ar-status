@@ -152,6 +152,20 @@ section.tbl .scroll{margin:6px}
 .a-ar td.cname{min-width:6rem;max-width:9rem}
 .a-ac td,.a-ac th{white-space:nowrap}
 .a-ac td.cname{white-space:normal}
+/* The four lower tables never need sideways scrolling: columns share the width and text wraps */
+.a-cr .scroll,.a-ar .scroll,.a-ps .scroll,.a-ac .scroll{overflow-x:auto}
+.a-cr table,.a-ar table,.a-ps table,.a-ac table{table-layout:auto;width:100%}
+.a-cr th,.a-ar th,.a-ps th,.a-ac th{white-space:normal;vertical-align:top}
+.a-cr th .sortbtn,.a-ar th .sortbtn,.a-ps th .sortbtn,.a-ac th .sortbtn{white-space:normal;text-align:left;padding:4px 6px}
+.a-cr td,.a-ar td,.a-ps td,.a-ac td{white-space:normal;overflow-wrap:anywhere;min-width:0;padding:4px 6px}
+.a-cr td.cname,.a-ar td.cname,.a-ps td.cname,.a-ac td.cname,.a-cr td.wide{min-width:0;max-width:none;white-space:normal}
+.a-cr th.first,.a-cr td.cname,.a-ar th.first,.a-ar td.cname,.a-ps th.first,.a-ps td.cname,.a-ac th.first,.a-ac td.cname{position:static}
+.a-cr td.num,.a-ar td.num,.a-ps td.num,.a-ac td.num{white-space:nowrap}
+.a-ac td,.a-ac th{white-space:normal}
+.bottom{grid-template-columns:minmax(0,1.3fr) minmax(0,.85fr) minmax(0,1.45fr)}
+.a-cr td,.a-ar td,.a-ps td,.a-ac td,.a-cr th,.a-ar th,.a-ps th,.a-ac th,.a-cr .cust,.a-ar .cust,.a-ps .cust,.a-ac .cust,.a-cr .sortbtn,.a-ar .sortbtn,.a-ps .sortbtn,.a-ac .sortbtn{font-size:8.5pt}
+.a-cr td,.a-ar td,.a-ps td,.a-ac td{padding:3px 4px}
+.a-cr th .sortbtn,.a-ar th .sortbtn,.a-ps th .sortbtn,.a-ac th .sortbtn{padding:3px 4px}
 @media (max-width:1250px){.bottom{grid-template-columns:minmax(0,1fr)}}
 /* Fit everything on one screen (wide screens): the page itself never scrolls, each table scrolls inside its own box */
 @media (min-width:1251px) and (min-height:560px){
