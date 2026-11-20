@@ -89,7 +89,7 @@ th .sortbtn{display:flex;width:100%;align-items:center;gap:6px;justify-content:f
 th .sortbtn:hover{color:var(--ink)}
 th .ind{font-size:10px;opacity:.35}
 th[aria-sort="ascending"] .ind,th[aria-sort="descending"] .ind{opacity:1;color:var(--accent)}
-td{padding:7px 12px;vertical-align:top;white-space:nowrap;background:var(--surface)}
+td{padding:4px 12px;line-height:1.2;vertical-align:top;white-space:nowrap;background:var(--surface)}
 tbody tr:hover td{background:var(--row-hover)}
 td.num,th.num{text-align:left;font-variant-numeric:tabular-nums}
 td.neg{color:var(--neg)}
@@ -125,6 +125,7 @@ select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid 
 /* Calibri 10 pt everywhere (title slightly larger) */
 body,table,th,td,button,input,select,.sub,.updated,.legend,.th h2,.th .meta,.kpi .k,.kpi .v,.pin .kpi .k,.pin .kpi .v,.stagebar,.selbar .counts,.more,.state,.cust,.chip{font-size:10pt}
 h1{font-size:14pt}
+td .cust{line-height:1.2}
 /* On Hold Remarks panel */
 .holdbox{margin-top:8px;border:1px solid var(--grid);border-radius:6px;background:var(--cream);overflow:hidden;max-height:200px;overflow-y:auto}
 .holdbox[hidden]{display:none!important}
