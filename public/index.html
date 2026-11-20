@@ -369,7 +369,7 @@ section.tbl .scroll{margin:6px}
       if(stageFilter && stageOf[n]!==stageFilter) return false;
       if(salesFilter && salesOf[n]!==salesFilter) return false;
       if(handleFilter && handleOf[n]!==handleFilter) return false;
-      if(selected!==null) return n===selected;
+      if(selected!==null && key!=="aging") return n===selected; // Aging always keeps every company
       return q==="" || n.toLowerCase().indexOf(q)>=0;
     });
   }
