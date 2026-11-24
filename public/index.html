@@ -854,13 +854,13 @@ section.tbl .scroll{margin:6px}
     box.appendChild(list);
   }
 
-  // Aging box is sized to show 18 rows (measured, so it follows zoom/font); on short screens it is capped so the lower tables stay visible
+  // Aging box is sized to show 16 rows (measured, so it follows zoom/font); on short screens it is capped so the lower tables stay visible
   function fitAging(){
     var sc = document.querySelector("#sec-aging .scroll"); if(!sc) return;
     var table = sc.querySelector("table"); if(!table) return;
     var rows = table.querySelectorAll("tbody tr"); if(!rows.length) return;
     var th = table.querySelector("thead"), tf = table.querySelector("tfoot");
-    var h = 0, n = Math.min(18, rows.length);
+    var h = 0, n = Math.min(16, rows.length);
     for(var i=0;i<n;i++) h += rows[i].getBoundingClientRect().height;
     var total = h + (th ? th.getBoundingClientRect().height : 0) + (tf ? tf.getBoundingClientRect().height : 0) + 4;
     var fit = window.matchMedia("(min-width:1251px) and (min-height:560px)").matches;
