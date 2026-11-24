@@ -7,7 +7,7 @@
   --bg:#edf0f4; --surface:#ffffff; --ink:#14202e; --muted:#586577; --line:#d8dee6; --grid:#b9c3d0;
   --head:#eaeff5; --accent:#0e5a8a; --accent-ink:#ffffff; --sel:#cfe6f7; --sel-ink:#0b2f49;
   --s1:#a66a00; --s2:#d03a12; --s3:#7c3aed; --s4:#0f766e;
-  --cream:#fff0a8; --lilac:#ebe3fa; --neg:#b3261e; --warn:#8a5a00; --row-hover:#f1f6fb;
+  --cream:#fff0a8; --lilac:#ebe3fa; --teal:#c8eeee; --teal-b:#8fd3d3; --neg:#b3261e; --warn:#8a5a00; --row-hover:#f1f6fb;
   --font-display:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
   --font-body:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
   --font-mono:Calibri,Carlito,'Segoe UI',Arial,sans-serif;
@@ -17,14 +17,14 @@
     --bg:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#93a0b1; --line:#253142; --grid:#3a4a60;
     --head:#1b2633; --accent:#62b1e8; --accent-ink:#06121c; --sel:#1e3d57; --sel-ink:#d9eeff;
     --s1:#f0b84a; --s2:#ff8a65; --s3:#b794f6; --s4:#4fd1c5;
-    --cream:#6a5a18; --lilac:#3b3158; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
+    --cream:#6a5a18; --lilac:#3b3158; --teal:#1f5557; --teal-b:#2f7f82; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#93a0b1; --line:#253142; --grid:#3a4a60;
   --head:#1b2633; --accent:#62b1e8; --accent-ink:#06121c; --sel:#1e3d57; --sel-ink:#d9eeff;
   --s1:#f0b84a; --s2:#ff8a65; --s3:#b794f6; --s4:#4fd1c5;
-  --cream:#6a5a18; --lilac:#3b3158; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
+  --cream:#6a5a18; --lilac:#3b3158; --teal:#1f5557; --teal-b:#2f7f82; --neg:#ff8f85; --warn:#f0c060; --row-hover:#1a2531; color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;
@@ -41,6 +41,11 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 h1{font-family:var(--font-display);font-weight:700;font-size:clamp(26px,4vw,36px);letter-spacing:.01em;line-height:1.05;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin-top:4px;font-size:13px}
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolcol{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.tools.links{justify-content:flex-end}
+a.btn{display:inline-block;text-decoration:none;white-space:nowrap}
+.btn.teal{background:var(--teal);border-color:var(--teal-b);color:var(--ink)}
+.btn.teal:hover{border-color:var(--ink)}
 input[type=search]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--grid);border-radius:6px;padding:8px 10px;width:min(280px,100%)}
 button{font:inherit;cursor:pointer}
 .btn{background:var(--surface);color:var(--ink);border:1px solid var(--grid);border-radius:6px;padding:8px 12px;font-weight:500}
@@ -210,9 +215,15 @@ section.tbl .scroll{margin:6px}
       <h1>PEPL AR Status</h1>
       <div class="sub">Aging · AR Follow Up · Weekly Expected Receipts · Bank Incoming Monthly Receipts · Action, linked by Customer Name. Click a customer name to show only that customer in every table. Click a column title to sort.</div>
     </div>
-    <div class="tools">
-      <input type="search" id="q" placeholder="Search Customer Name" aria-label="Search Customer Name">
-      <button class="btn primary" id="refresh">Refresh data</button>
+    <div class="toolcol">
+      <div class="tools">
+        <input type="search" id="q" placeholder="Search Customer Name" aria-label="Search Customer Name">
+        <button class="btn primary" id="refresh">Refresh data</button>
+      </div>
+      <div class="tools links">
+        <a class="btn teal" href="https://forms.gle/Fefuuyz9QLkDnWws5" target="_blank" rel="noopener noreferrer">PEPL Action Form</a>
+        <a class="btn teal" href="https://forms.gle/6eLnMAyDoJWKVCJe7" target="_blank" rel="noopener noreferrer">PEPL AR Follow Up Form</a>
+      </div>
     </div>
   </header>
   <div class="updated" id="updated" aria-live="polite">Loading…</div>
