@@ -192,13 +192,14 @@ section.tbl .scroll{margin:6px}
   .pin{position:static;padding:2px 0 4px;gap:4px}
   #app{min-height:0;height:100%}
   .layout{height:100%;gap:8px}
-  .a-top{flex:0 0 36%;min-height:0}
+  .a-top{flex:0 0 auto;min-height:0}
   .bottom{flex:1;min-height:0;align-items:stretch;gap:8px}
   .bcol{min-height:0;gap:8px}
   section.tbl{display:flex;flex-direction:column;min-height:0}
   .bcol section.tbl{flex:1 1 0}
   section.tbl .scroll{flex:1 1 auto;min-height:0;max-height:none}
-  .a-top .scroll,.a-cr .scroll,.a-ar .scroll,.a-ps .scroll,.a-ac .scroll{max-height:none}
+  .a-cr .scroll,.a-ar .scroll,.a-ps .scroll,.a-ac .scroll{max-height:none}
+  .a-top .scroll{flex:0 1 auto}
   .a-ac .legend{display:none}
 }
 </style>
@@ -853,6 +854,22 @@ section.tbl .scroll{margin:6px}
     box.appendChild(list);
   }
 
+  // Aging box is sized to show 20 rows (measured, so it follows zoom/font); on short screens it is capped so the lower tables stay visible
+  function fitAging(){
+    var sc = document.querySelector("#sec-aging .scroll"); if(!sc) return;
+    var table = sc.querySelector("table"); if(!table) return;
+    var rows = table.querySelectorAll("tbody tr"); if(!rows.length) return;
+    var th = table.querySelector("thead"), tf = table.querySelector("tfoot");
+    var h = 0, n = Math.min(20, rows.length);
+    for(var i=0;i<n;i++) h += rows[i].getBoundingClientRect().height;
+    var total = h + (th ? th.getBoundingClientRect().height : 0) + (tf ? tf.getBoundingClientRect().height : 0) + 4;
+    var fit = window.matchMedia("(min-width:1251px) and (min-height:560px)").matches;
+    var cap = fit ? window.innerHeight - sc.getBoundingClientRect().top - 220 : total; // leave room for the lower tables
+    sc.style.maxHeight = Math.max(160, Math.min(total, cap)) + "px";
+  }
+  var fitTimer = null;
+  window.addEventListener("resize", function(){ clearTimeout(fitTimer); fitTimer = setTimeout(fitAging, 150); });
+
   function render(){
     var app = document.getElementById("app");
     var pos = {};
@@ -889,7 +906,7 @@ section.tbl .scroll{margin:6px}
     holder.appendChild(bottom);
     app.appendChild(holder);
     document.querySelectorAll("[data-scroll]").forEach(function(n){ var p = pos[n.getAttribute("data-scroll")]; if(p){ n.scrollTop = p[0]; n.scrollLeft = p[1]; } });
-    renderKpis(); renderHold(); renderAction();
+    renderKpis(); renderHold(); renderAction(); fitAging();
     var bar = document.getElementById("selbar");
     if(selected!==null){
       bar.hidden = false;
